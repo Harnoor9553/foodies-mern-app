@@ -1,0 +1,11 @@
+node_modules/
+.env
+logs
+*.log
+.DS_Store
+.vscode/
+dist/
+build/
+
+foodies-frontend/node_modules/
+foodies-backend/node_modules/
