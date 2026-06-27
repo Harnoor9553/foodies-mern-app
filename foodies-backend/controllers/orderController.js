@@ -1,15 +1,7 @@
-// =============================================
-// controllers/orderController.js - Order Logic
-// =============================================
 
 const Order = require("../models/Order");
 const Cart = require("../models/Cart");
 
-// -------------------------------------------------------
-// @desc    Place a new order (checkout from cart)
-// @route   POST /api/orders
-// @access  Private
-// -------------------------------------------------------
 const placeOrder = async (req, res, next) => {
   try {
     const { deliveryAddress, paymentMethod = "Cash on Delivery", notes } = req.body;
@@ -53,6 +45,7 @@ const cart = {
       notes: notes || "",
     });
 
+    
     // Clear the cart after placing order
     cart.items = [];
     cart.totalPrice = 0;
@@ -68,11 +61,6 @@ const cart = {
   }
 };
 
-// -------------------------------------------------------
-// @desc    Get all orders for the logged-in user
-// @route   GET /api/orders
-// @access  Private
-// -------------------------------------------------------
 const getMyOrders = async (req, res, next) => {
   try {
     const orders = await Order.find({ user: req.user._id }).sort({ createdAt: -1 });
@@ -87,11 +75,6 @@ const getMyOrders = async (req, res, next) => {
   }
 };
 
-// -------------------------------------------------------
-// @desc    Get single order by ID
-// @route   GET /api/orders/:id
-// @access  Private
-// -------------------------------------------------------
 const getOrderById = async (req, res, next) => {
   try {
     const order = await Order.findById(req.params.id);
@@ -111,11 +94,6 @@ const getOrderById = async (req, res, next) => {
   }
 };
 
-// -------------------------------------------------------
-// @desc    Cancel an order
-// @route   PUT /api/orders/:id/cancel
-// @access  Private
-// -------------------------------------------------------
 const cancelOrder = async (req, res, next) => {
   try {
     const order = await Order.findById(req.params.id);
@@ -146,11 +124,6 @@ const cancelOrder = async (req, res, next) => {
   }
 };
 
-// -------------------------------------------------------
-// @desc    Update order status (ADMIN only)
-// @route   PUT /api/orders/:id/status
-// @access  Private/Admin
-// -------------------------------------------------------
 const updateOrderStatus = async (req, res, next) => {
   try {
     const { status } = req.body;
@@ -179,11 +152,6 @@ const updateOrderStatus = async (req, res, next) => {
   }
 };
 
-// -------------------------------------------------------
-// @desc    Get ALL orders (ADMIN only)
-// @route   GET /api/orders/admin/all
-// @access  Private/Admin
-// -------------------------------------------------------
 const getAllOrders = async (req, res, next) => {
   try {
     const orders = await Order.find({})

@@ -7,7 +7,9 @@
 
 // Load environment variables from .env file FIRST
 require("dotenv").config();
-
+console.log("MONGO_URI =", process.env.MONGO_URI);
+console.log("NODE_ENV =", process.env.NODE_ENV);
+console.log("FRONTEND_URL =", process.env.FRONTEND_URL);
 const express = require("express");
 const cors = require("cors");
 const connectDB = require("./config/db");
@@ -38,11 +40,15 @@ const app = express();
 // CORS: Allow requests from your frontend origin
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://127.0.0.1:5500",
-    credentials: true, // allows cookies if you use them later
+    origin: [
+      "http://localhost:5500",
+      "http://127.0.0.1:5500",
+      "http://127.0.0.1:5501",
+      "http://localhost:5501",
+    ],
+    credentials: true,
   })
 );
-
 // Parse incoming JSON request bodies (req.body)
 app.use(express.json());
 

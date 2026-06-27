@@ -5,11 +5,6 @@
 const Cart = require("../models/Cart");
 const FoodItem = require("../models/FoodItem");
 
-// -------------------------------------------------------
-// @desc    Get current user's cart
-// @route   GET /api/cart
-// @access  Private
-// -------------------------------------------------------
 const getCart = async (req, res, next) => {
   try {
     // populate() replaces the foodItem ID with the actual food document
@@ -32,11 +27,6 @@ const getCart = async (req, res, next) => {
   }
 };
 
-// -------------------------------------------------------
-// @desc    Add item to cart (or increase quantity if exists)
-// @route   POST /api/cart
-// @access  Private
-// -------------------------------------------------------
 const addToCart = async (req, res, next) => {
   try {
     const { foodItemId, quantity = 1 } = req.body;
@@ -114,7 +104,7 @@ const updateCartItem = async (req, res, next) => {
     }
 
     const cart = await Cart.findOne({ user: req.user._id });
-    if (!cart) {
+    if (!cart) { 
       return res.status(404).json({ success: false, message: "Cart not found" });
     }
 
