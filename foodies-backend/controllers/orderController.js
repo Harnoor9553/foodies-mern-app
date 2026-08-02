@@ -47,9 +47,9 @@ const cart = {
 
     
     // Clear the cart after placing order
-    cart.items = [];
-    cart.totalPrice = 0;
-    await cart.save();
+    //cart.items = [];
+    //cart.totalPrice = 0;
+    //await cart.save();
 
     res.status(201).json({
       success: true,
