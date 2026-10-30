@@ -2,11 +2,16 @@
 const Order = require("../models/Order");
 const Cart = require("../models/Cart");
 
+
 const placeOrder = async (req, res, next) => {
   try {
-    const { deliveryAddress, paymentMethod = "Cash on Delivery", notes } = req.body;
+    const {
+      deliveryAddress,
+      paymentMethod = "Cash on Delivery",
+      notes
+    } = req.body;
 
-    // Validate delivery address
+    // 1. Validate delivery address
     if (
       !deliveryAddress ||
       !deliveryAddress.street ||
@@ -16,50 +21,71 @@ const placeOrder = async (req, res, next) => {
     ) {
       return res.status(400).json({
         success: false,
-        message: "Please provide complete delivery address (street, city, pincode, phone)",
+        message: "Please provide complete delivery address"
       });
     }
 
-    // Get user's current cart
-// TEMP: use frontend data instead of DB cart
-const cart = {
-  items: req.body.items,
-  totalPrice: req.body.totalPrice
-};
-    // Build the order items array — take a snapshot of current prices
-    const orderItems = cart.items.map((item) => ({
-      foodItem: item.foodItem._id,
-      name: item.foodItem.name,
-      price: item.price, // price at the time of adding to cart
-      quantity: item.quantity,
-      image: item.foodItem.image,
-    }));
+    // 2. Fetch the logged-in user's cart
+    const cart = await Cart.findOne({
+      user: req.user._id
+    }).populate("items.foodItem", "name image price isAvailable");
 
-    // Create the order
+    // 3. Check whether cart exists and has items
+    if (!cart || cart.items.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Your cart is empty"
+      });
+    }
+
+    // 4. Prepare order items
+    const orderItems = cart.items.map((item) => {
+      if (!item.foodItem || !item.foodItem.isAvailable) {
+        throw new Error("A food item in your cart is unavailable");
+      }
+
+      return {
+        foodItem: item.foodItem._id,
+        name: item.foodItem.name,
+        price: item.price,
+        quantity: item.quantity,
+        image: item.foodItem.image
+      };
+    });
+
+    // 5. Calculate total on the backend
+    const totalPrice = orderItems.reduce((total, item) => {
+      return total + item.price * item.quantity;
+    }, 0);
+
+    // 6. Create order in MongoDB
     const order = await Order.create({
       user: req.user._id,
       items: orderItems,
       deliveryAddress,
-      totalPrice: cart.totalPrice,
+      totalPrice,
       paymentMethod,
-      notes: notes || "",
+      notes: notes || ""
     });
 
-    
-    // Clear the cart after placing order
-    //cart.items = [];
-    //cart.totalPrice = 0;
-    //await cart.save();
+    // 7. Clear cart after successful order creation
+    cart.items = [];
+    cart.totalPrice = 0;
+    await cart.save();
 
+    // 8. Send response
     res.status(201).json({
       success: true,
-      message: "Order placed successfully! 🎉",
-      data: order,
+      message: "Order placed successfully!",
+      data: order
     });
+
   } catch (error) {
     next(error);
   }
 };
+
+
 
 const getMyOrders = async (req, res, next) => {
   try {

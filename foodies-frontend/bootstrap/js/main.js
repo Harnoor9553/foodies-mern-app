@@ -439,3 +439,59 @@ async function updateProfile() {
 
   alert("Profile updated");
 }
+
+// API URL
+const API_URL = "http://localhost:5000/api";
+
+// Store food items fetched from backend
+let foodItems = [];
+
+// Fetch food items from MongoDB through backend
+async function loadFoods() {
+  const foodContainer = document.getElementById("foodContainer");
+
+  try {
+    const response = await fetch(`${API_URL}/food`);
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error(result.message || "Failed to load food");
+    }
+
+    foodItems = result.data;
+
+    foodContainer.innerHTML = foodItems
+      .filter(food => food.isAvailable)
+      .map(food => `
+        <div class="col-lg-4 col-md-6 mb-5">
+          <div class="card">
+            <img
+              src="${food.image}"
+              class="img-fluid"
+              alt="${food.name}"
+            >
+
+            <div class="pt-3">
+              <h4>${food.name}</h4>
+              <p>${food.description}</p>
+              <span>₹${food.price}</span>
+
+              <button
+                class="mt-2 main-btn add-to-cart-btn"
+                data-id="${food._id}">
+                Add to Cart
+              </button>
+            </div>
+          </div>
+        </div>
+      `).join("");
+
+  } catch (error) {
+    console.error("Food loading error:", error);
+    foodContainer.innerHTML =
+      "<p>Unable to load food. Please try again.</p>";
+  }
+}
+
+// Load food when page opens
+document.addEventListener("DOMContentLoaded", loadFoods);

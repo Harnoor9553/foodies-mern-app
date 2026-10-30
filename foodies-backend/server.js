@@ -7,9 +7,7 @@
 
 // Load environment variables from .env file FIRST
 require("dotenv").config();
-console.log("MONGO_URI =", process.env.MONGO_URI);
-console.log("NODE_ENV =", process.env.NODE_ENV);
-console.log("FRONTEND_URL =", process.env.FRONTEND_URL);
+
 const express = require("express");
 const cors = require("cors");
 const connectDB = require("./config/db");
