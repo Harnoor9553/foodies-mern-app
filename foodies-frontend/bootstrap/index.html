@@ -456,8 +456,53 @@
 
   <h5 id="cartTotal">Total: ₹0</h5>
 
-  <button id="placeOrderBtn" class="main-btn w-100">Place Order</button>
-  <button id="closeCart" class="white-btn w-100 mt-2">Close</button>
+
+<!-- CART ACTION BUTTONS -->
+<button id="placeOrderBtn" class="main-btn w-100">
+  Proceed to Checkout
+</button>
+
+<button id="closeCart" class="white-btn w-100 mt-2">
+  Close
+</button>
+
+<!-- CHECKOUT FORM -->
+<div id="checkoutModal" style="display:none; padding-top:20px;">
+
+  <h4>Delivery Details</h4>
+
+  <input type="text" id="street"
+    class="form-control mb-2"
+    placeholder="House number, street and area">
+
+  <input type="text" id="city"
+    class="form-control mb-2"
+    placeholder="City">
+
+  <input type="text" id="pincode"
+    class="form-control mb-2"
+    placeholder="6-digit Pincode">
+
+  <input type="tel" id="phone"
+    class="form-control mb-2"
+    placeholder="10-digit Phone Number">
+
+  <label class="mt-2">Payment Method</label>
+
+ <select id="paymentMethod">
+    <option value="Cash on Delivery">Cash on Delivery</option>
+    <option value="Online">Online Payment (UPI / Cards / Net Banking)</option>
+</select>
+
+  <button id="confirmOrderBtn" class="main-btn w-100">
+    Confirm Order
+  </button>
+
+  <button id="backToCartBtn" class="white-btn w-100 mt-2">
+    Back to Cart
+  </button>
+
+</div>
 
 </div>
 <div id="loginModal" class="auth-modal">
@@ -483,6 +528,7 @@
 </div>
 
     <!-- own js -->
+     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html>

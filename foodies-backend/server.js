@@ -20,6 +20,7 @@ const cartRoutes = require("./routes/cartRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 const newsletterRoutes = require("./routes/newsletterRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
 
 // -------------------------------------------------------
 // Connect to MongoDB
@@ -81,6 +82,7 @@ app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/newsletter", newsletterRoutes);
+app.use("/api/payments", paymentRoutes);
 
 // -------------------------------------------------------
 // ERROR HANDLING MIDDLEWARE (must be LAST)

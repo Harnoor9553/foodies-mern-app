@@ -473,3 +473,64 @@ Footer section design
   color: var(--white-color);
   padding: 0 1rem;
 }
+
+/* =====================================
+   CART QUANTITY CONTROLS
+===================================== */
+
+.quantity-btn {
+  width: 34px;
+  height: 34px;
+  border: 1px solid #b02a4a;
+  border-radius: 8px;
+  background: #fff;
+  color: #b02a4a;
+  font-size: 21px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.quantity-btn:hover:not(:disabled) {
+  background: #b02a4a;
+  color: #fff;
+}
+
+.quantity-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Quantity number */
+.cart-quantity {
+  min-width: 24px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 17px;
+}
+
+/* Remove button */
+.remove-cart-item {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  background: #fff0f2;
+  color: #dc3545;
+  font-size: 17px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.remove-cart-item:hover {
+  background: #dc3545;
+  color: white;
+}

@@ -154,6 +154,7 @@ async function loadCart() {
 }
 
 // DISPLAY CART ITEMS
+
 function renderCart() {
   const cartItems = document.getElementById("cartItems");
   const cartTotal = document.getElementById("cartTotal");
@@ -174,11 +175,35 @@ function renderCart() {
     const li = document.createElement("li");
 
     li.innerHTML = `
-      ${food.name} (x${item.quantity}) -
-      ₹${item.price * item.quantity}
-      <button class="remove-cart-item" data-id="${food._id}">
-        ❌
-      </button>
+      <div class="mb-3">
+        <strong>${food.name}</strong>
+        <br>
+        <span>₹${item.price} × ${item.quantity}</span>
+
+        <div class="d-flex align-items-center gap-2 mt-2">
+
+          <button class="quantity-btn"
+            data-id="${food._id}"
+            data-action="decrease"
+            ${item.quantity <= 1 ? "disabled" : ""}>
+            −
+          </button>
+
+         <span class="cart-quantity">${item.quantity}</span>
+
+          <button class="quantity-btn"
+            data-id="${food._id}"
+            data-action="increase">
+            +
+          </button>
+
+          <button class="remove-cart-item"
+            data-id="${food._id}">
+            ❌
+          </button>
+
+        </div>
+      </div>
     `;
 
     cartItems.appendChild(li);
@@ -186,6 +211,37 @@ function renderCart() {
 
   cartTotal.textContent = `Total: ₹${currentCart.totalPrice}`;
 }
+
+// UPDATE ITEM QUANTITY
+async function updateCartQuantity(foodItemId, newQuantity) {
+  const token = localStorage.getItem("token");
+
+  try {
+    const response = await fetch(`${API_URL}/cart/${foodItemId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        quantity: newQuantity
+      })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error(result.message || "Unable to update quantity");
+    }
+
+    await loadCart();
+
+  } catch (error) {
+    console.error("Quantity update error:", error);
+    alert(error.message);
+  }
+}
+
 
 // REMOVE ITEM FROM BACKEND
 async function removeItem(foodItemId) {
@@ -213,63 +269,266 @@ async function removeItem(foodItemId) {
   }
 }
 
-// HANDLE REMOVE BUTTON CLICKS
+
 document.getElementById("cartItems").addEventListener("click", (event) => {
-  const button = event.target.closest(".remove-cart-item");
 
-  if (!button) return;
+  // REMOVE ITEM
+  const removeButton = event.target.closest(".remove-cart-item");
 
-  removeItem(button.dataset.id);
-});
-
-// PLACE ORDER
-document.getElementById("placeOrderBtn").addEventListener("click", async () => {
-  const token = localStorage.getItem("token");
-
-  if (!token) {
-    alert("Please login first to place an order");
+  if (removeButton) {
+    removeItem(removeButton.dataset.id);
     return;
   }
 
+  // INCREASE OR DECREASE QUANTITY
+  const quantityButton = event.target.closest(".quantity-btn");
+
+  if (!quantityButton) return;
+
+  const foodItemId = quantityButton.dataset.id;
+  const action = quantityButton.dataset.action;
+
+  const item = currentCart.items.find(
+    item => item.foodItem && item.foodItem._id === foodItemId
+  );
+
+  if (!item) return;
+
+  let newQuantity = item.quantity;
+
+  if (action === "increase") {
+    newQuantity++;
+  } else if (action === "decrease") {
+    newQuantity--;
+  }
+
+  if (newQuantity >= 1) {
+    updateCartQuantity(foodItemId, newQuantity);
+  }
+
+});
+
+
+// OPEN CHECKOUT FORM
+document.getElementById("placeOrderBtn").addEventListener("click", () => {
   if (!currentCart.items || currentCart.items.length === 0) {
     alert("Your cart is empty");
     return;
   }
 
-  try {
-    const response = await fetch(`${API_URL}/orders`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        deliveryAddress: {
-          street: "123 Street",
-          city: "Delhi",
-          pincode: "110001",
-          phone: "9999999999"
-        },
-        paymentMethod: "Cash on Delivery"
-      })
-    });
+  document.getElementById("checkoutModal").style.display = "block";
+  document.getElementById("placeOrderBtn").style.display = "none";
+  document.getElementById("closeCart").style.display = "none";
+});
 
-    const result = await response.json();
 
-    if (!response.ok || !result.success) {
-      throw new Error(result.message || "Order placement failed");
+// BACK TO CART
+document.getElementById("backToCartBtn").addEventListener("click", () => {
+  document.getElementById("checkoutModal").style.display = "none";
+  document.getElementById("placeOrderBtn").style.display = "block";
+  document.getElementById("closeCart").style.display = "block";
+});
+
+
+// CONFIRM ORDER
+
+document.getElementById("confirmOrderBtn").addEventListener("click", async () => {
+    const token = localStorage.getItem("token");
+
+    const street = document.getElementById("street").value.trim();
+    const city = document.getElementById("city").value.trim();
+    const pincode = document.getElementById("pincode").value.trim();
+    const phone = document.getElementById("phone").value.trim();
+    const paymentMethod = document.getElementById("paymentMethod").value;
+
+    if (!token) {
+        alert("Please login first");
+        return;
     }
 
-    alert("Order placed successfully!");
+    if (!street || !city || !pincode || !phone) {
+        alert("Please fill in all delivery details");
+        return;
+    }
 
-    await loadCart();
-    cartModal.style.right = "-400px";
+    if (!/^\d{6}$/.test(pincode)) {
+        alert("Please enter a valid 6-digit pincode");
+        return;
+    }
 
-  } catch (error) {
-    console.error("Place order error:", error);
-    alert(error.message);
-  }
+    if (!/^[6-9]\d{9}$/.test(phone)) {
+        alert("Please enter a valid 10-digit Indian mobile number");
+        return;
+    }
+
+    const deliveryAddress = {
+        street,
+        city,
+        pincode,
+        phone
+    };
+
+    try {
+        // =====================================
+        // CASE 1: CASH ON DELIVERY
+        // =====================================
+
+        if (paymentMethod === "Cash on Delivery") {
+
+            const response = await fetch(`${API_URL}/orders`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    deliveryAddress,
+                    paymentMethod
+                })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                throw new Error(result.message || "Order placement failed");
+            }
+
+            alert("Order placed successfully!");
+
+            await loadCart();
+
+            document.getElementById("checkoutModal").style.display = "none";
+            document.getElementById("placeOrderBtn").style.display = "block";
+            document.getElementById("closeCart").style.display = "block";
+
+            cartModal.style.right = "-400px";
+
+            document.getElementById("street").value = "";
+            document.getElementById("city").value = "";
+            document.getElementById("pincode").value = "";
+            document.getElementById("phone").value = "";
+
+            return;
+        }
+
+        // =====================================
+        // CASE 2: ONLINE PAYMENT WITH RAZORPAY
+        // =====================================
+
+        if (paymentMethod === "Online") {
+
+            if (typeof window.Razorpay === "undefined") {
+                throw new Error("Razorpay Checkout failed to load. Please refresh the page.");
+            }
+
+            // Step 1: Ask backend to create Razorpay order
+            const response = await fetch(`${API_URL}/payments/create-order`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    deliveryAddress
+                })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                throw new Error(result.message || "Unable to create payment");
+            }
+
+            const paymentData = result.data;
+
+            // Step 2: Configure Razorpay Checkout
+            const options = {
+                key: paymentData.keyId,
+                amount: paymentData.amount,
+                currency: paymentData.currency,
+                name: "Foodies",
+                description: "Food Order Payment",
+                order_id: paymentData.razorpayOrderId,
+
+                handler: async function (paymentResponse) {
+                    try {
+                        // Step 3: Send payment details to backend for verification
+                        const verifyResponse = await fetch(`${API_URL}/payments/verify`, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                Authorization: `Bearer ${token}`
+                            },
+                            body: JSON.stringify({
+                                razorpay_order_id: paymentResponse.razorpay_order_id,
+                                razorpay_payment_id: paymentResponse.razorpay_payment_id,
+                                razorpay_signature: paymentResponse.razorpay_signature
+                            })
+                        });
+
+                        const verifyResult = await verifyResponse.json();
+
+                        if (!verifyResponse.ok || !verifyResult.success) {
+                            throw new Error(
+                                verifyResult.message || "Payment verification failed"
+                            );
+                        }
+
+                        // Step 4: Payment verified successfully!
+                        alert("Payment successful! Your order has been placed.");
+
+                        await loadCart();
+
+                        document.getElementById("checkoutModal").style.display = "none";
+                        document.getElementById("placeOrderBtn").style.display = "block";
+                        document.getElementById("closeCart").style.display = "block";
+
+                        cartModal.style.right = "-400px";
+
+                        document.getElementById("street").value = "";
+                        document.getElementById("city").value = "";
+                        document.getElementById("pincode").value = "";
+                        document.getElementById("phone").value = "";
+
+                    } catch (error) {
+                        console.error("Payment verification error:", error);
+                        alert(error.message);
+                    }
+                },
+
+                prefill: {
+                    contact: phone
+                },
+
+                theme: {
+                    color: "#8B0000"
+                },
+
+                modal: {
+                    ondismiss: function () {
+                        console.log("Razorpay checkout closed by customer");
+                    }
+                }
+            };
+
+            // Step 5: Open Razorpay payment window
+            const razorpayInstance = new window.Razorpay(options);
+
+            razorpayInstance.on("payment.failed", function (response) {
+                console.error("Payment failed:", response.error);
+                alert("Payment failed. Your cart is still saved. Please try again.");
+            });
+
+            razorpayInstance.open();
+        }
+
+    } catch (error) {
+        console.error("Checkout error:", error);
+        alert(error.message);
+    }
 });
+
+
 
 
 
