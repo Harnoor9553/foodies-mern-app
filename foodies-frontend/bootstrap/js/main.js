@@ -103,65 +103,127 @@ orderButtons.forEach(button => {
     }
   });
 });
-let cart = JSON.parse(localStorage.getItem("cart")) || [];
 
-// ADD TO CART
-document.querySelectorAll(".add-to-cart-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    const name = btn.getAttribute("data-name");
-    const price = parseFloat(btn.getAttribute("data-price"));
-
-    cart.push({ name, price, quantity: 1 });
-
-    localStorage.setItem("cart", JSON.stringify(cart));
-
-    alert(`${name} added to cart`);
-    openCart();
-    renderCart();
-  });
-});
 const cartModal = document.getElementById("cartModal");
 
+let currentCart = {
+  items: [],
+  totalPrice: 0
+};
+
+// OPEN CART
 function openCart() {
   cartModal.style.right = "0";
+  loadCart();
 }
 
+// CLOSE CART
 document.getElementById("closeCart").addEventListener("click", () => {
   cartModal.style.right = "-400px";
-});function renderCart() {
+});
+
+// FETCH CART FROM BACKEND
+async function loadCart() {
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    alert("Please login to view your cart");
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/cart`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error(result.message || "Unable to load cart");
+    }
+
+    currentCart = result.data;
+    renderCart();
+
+  } catch (error) {
+    console.error("Load cart error:", error);
+    alert(error.message);
+  }
+}
+
+// DISPLAY CART ITEMS
+function renderCart() {
   const cartItems = document.getElementById("cartItems");
   const cartTotal = document.getElementById("cartTotal");
 
   cartItems.innerHTML = "";
 
-  if (cart.length === 0) {
+  if (!currentCart.items || currentCart.items.length === 0) {
     cartItems.innerHTML = "<p>Your cart is empty</p>";
     cartTotal.textContent = "Total: ₹0";
     return;
   }
 
-  let total = 0;
+  currentCart.items.forEach((item) => {
+    const food = item.foodItem;
 
-  cart.forEach((item, index) => {
-    total += item.price * item.quantity;
+    if (!food) return;
 
     const li = document.createElement("li");
+
     li.innerHTML = `
-      ${item.name} (x${item.quantity}) - ₹${item.price * item.quantity}
-      <button onclick="removeItem(${index})">❌</button>
+      ${food.name} (x${item.quantity}) -
+      ₹${item.price * item.quantity}
+      <button class="remove-cart-item" data-id="${food._id}">
+        ❌
+      </button>
     `;
+
     cartItems.appendChild(li);
   });
 
-  cartTotal.textContent = `Total: ₹${total}`;
+  cartTotal.textContent = `Total: ₹${currentCart.totalPrice}`;
 }
-function removeItem(index) {
-  cart.splice(index, 1);
-  localStorage.setItem("cart", JSON.stringify(cart));
-  renderCart();
-}
-document.getElementById("placeOrderBtn").addEventListener("click", async () => {
 
+// REMOVE ITEM FROM BACKEND
+async function removeItem(foodItemId) {
+  const token = localStorage.getItem("token");
+
+  try {
+    const response = await fetch(`${API_URL}/cart/${foodItemId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error(result.message || "Unable to remove item");
+    }
+
+    await loadCart();
+
+  } catch (error) {
+    console.error("Remove item error:", error);
+    alert(error.message);
+  }
+}
+
+// HANDLE REMOVE BUTTON CLICKS
+document.getElementById("cartItems").addEventListener("click", (event) => {
+  const button = event.target.closest(".remove-cart-item");
+
+  if (!button) return;
+
+  removeItem(button.dataset.id);
+});
+
+// PLACE ORDER
+document.getElementById("placeOrderBtn").addEventListener("click", async () => {
   const token = localStorage.getItem("token");
 
   if (!token) {
@@ -169,17 +231,17 @@ document.getElementById("placeOrderBtn").addEventListener("click", async () => {
     return;
   }
 
-  if (cart.length === 0) {
+  if (!currentCart.items || currentCart.items.length === 0) {
     alert("Your cart is empty");
     return;
   }
 
   try {
-    const response = await fetch("http://localhost:5000/api/orders", {
+    const response = await fetch(`${API_URL}/orders`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
+        Authorization: `Bearer ${token}`
       },
       body: JSON.stringify({
         deliveryAddress: {
@@ -188,26 +250,29 @@ document.getElementById("placeOrderBtn").addEventListener("click", async () => {
           pincode: "110001",
           phone: "9999999999"
         },
-        paymentMethod: "Cash on Delivery",
-        items: cart,
-        totalPrice: cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
+        paymentMethod: "Cash on Delivery"
       })
     });
 
-    const data = await response.json();
-    console.log(data);
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error(result.message || "Order placement failed");
+    }
 
     alert("Order placed successfully!");
 
-    cart = [];
-    localStorage.removeItem("cart");
-    renderCart();
+    await loadCart();
+    cartModal.style.right = "-400px";
 
   } catch (error) {
-    console.error(error);
-    alert("Order failed");
+    console.error("Place order error:", error);
+    alert(error.message);
   }
 });
+
+
+
 function openLogin() {
   document.getElementById("loginModal").style.display = "flex";
 }
@@ -493,5 +558,69 @@ async function loadFoods() {
   }
 }
 
-// Load food when page opens
+
+// =============================================
+// LOAD FOOD WHEN PAGE OPENS
+// =============================================
+
 document.addEventListener("DOMContentLoaded", loadFoods);
+
+
+// =============================================
+// ADD ITEM TO CART
+// =============================================
+
+async function addToCart(foodItemId) {
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    alert("Please login before adding items to cart.");
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/cart`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        foodItemId: foodItemId,
+        quantity: 1
+      })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error(result.message || "Unable to add item");
+    }
+
+    console.log("Updated cart:", result.data);
+
+    // Open cart and fetch latest items
+    openCart();
+
+  } catch (error) {
+    console.error("Add to cart error:", error);
+    alert(error.message);
+  }
+}
+
+
+// =============================================
+// ADD TO CART BUTTON CLICK LISTENER
+// =============================================
+
+document.getElementById("foodContainer").addEventListener("click", (event) => {
+
+  const button = event.target.closest(".add-to-cart-btn");
+
+  if (!button) return;
+
+  const foodItemId = button.dataset.id;
+
+  addToCart(foodItemId);
+
+});
