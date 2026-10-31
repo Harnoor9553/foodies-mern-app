@@ -1,0 +1,314 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>My Orders | Foodies</title>
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css">
+
+  <!-- Foodies CSS -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/responsive-style.css">
+
+  <style>
+    body {
+      background: #fafafa;
+    }
+
+    .orders-page {
+      padding: 140px 0 70px;
+      min-height: 80vh;
+    }
+
+    .orders-heading {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .order-card {
+      background: white;
+      border-radius: 12px;
+      padding: 25px;
+      margin-bottom: 25px;
+      box-shadow: 0 3px 15px rgba(0,0,0,0.08);
+      border: 1px solid #eee;
+    }
+
+    .order-id {
+      color: #b02a4a;
+      font-weight: 700;
+    }
+
+    .order-item {
+      padding: 12px 0;
+      border-bottom: 1px solid #eee;
+    }
+
+    .order-total {
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .empty-orders {
+      text-align: center;
+      padding: 50px 20px;
+      background: white;
+      border-radius: 12px;
+    }
+
+    .empty-orders i {
+      font-size: 45px;
+      color: #b02a4a;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- NAVBAR -->
+  <header>
+    <nav class="navbar navbar-expand-lg navigation-wrap fixed-top">
+      <div class="container">
+
+        <a class="navbar-brand" href="index.html">
+          <img src="images/logo.png" alt="Foodies Logo">
+        </a>
+
+        <button class="navbar-toggler" type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarText"
+          aria-controls="navbarText"
+          aria-expanded="false"
+          aria-label="Toggle navigation">
+
+          <i class="fas fa-stream navbar-toggler-icon"></i>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarText">
+          <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+
+            <li class="nav-item">
+              <a class="nav-link" href="index.html#home">Home</a>
+            </li>
+
+            <li class="nav-item">
+              <a class="nav-link active" href="orders.html">My Orders</a>
+            </li>
+
+            <li class="nav-item">
+              <a class="nav-link" href="index.html#explore-food">Explore Foods</a>
+            </li>
+
+          </ul>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+
+  <!-- ORDERS SECTION -->
+  <section class="orders-page">
+    <div class="container">
+
+      <div class="orders-heading">
+        <h2>My Orders</h2>
+        <p>Track and manage all your delicious orders.</p>
+      </div>
+
+      <div id="ordersList" class="row">
+        <p class="text-center">Loading your orders...</p>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- FOOTER -->
+  <footer class="text-center py-4">
+    <p>© 2026 Foodies. All Rights Reserved.</p>
+  </footer>
+
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/js/bootstrap.min.js"></script>
+
+
+  <!-- ORDERS JAVASCRIPT -->
+  <script>
+    const API_URL = "http://localhost:5000/api";
+
+    const ordersList = document.getElementById("ordersList");
+
+    async function loadOrders() {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        alert("Please login first.");
+        window.location.href = "index.html";
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/orders`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          throw new Error(result.message || "Unable to load orders");
+        }
+
+        const orders = result.data;
+
+        ordersList.innerHTML = "";
+
+        if (!orders || orders.length === 0) {
+          ordersList.innerHTML = `
+            <div class="col-12">
+              <div class="empty-orders">
+                <i class="fas fa-shopping-bag"></i>
+                <h4>No orders yet!</h4>
+                <p>Your delicious journey starts here.</p>
+                <a href="index.html#explore-food" class="main-btn">
+                  Explore Foods
+                </a>
+              </div>
+            </div>
+          `;
+          return;
+        }
+
+        orders.forEach(order => {
+          const card = document.createElement("div");
+          card.className = "col-lg-6";
+
+          const itemsHTML = order.items.map(item => `
+            <div class="order-item d-flex justify-content-between">
+              <span>${item.name} (x${item.quantity})</span>
+              <span>₹${item.price * item.quantity}</span>
+            </div>
+          `).join("");
+
+          const status = order.status || "Pending";
+          const normalizedStatus = status.toLowerCase();
+
+          let badgeColor = "secondary";
+
+          if (normalizedStatus === "pending") badgeColor = "warning";
+          else if (normalizedStatus === "confirmed") badgeColor = "info";
+          else if (normalizedStatus === "delivered") badgeColor = "success";
+          else if (normalizedStatus === "cancelled") badgeColor = "danger";
+
+          card.innerHTML = `
+            <div class="order-card">
+
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="order-id mb-0">
+                  Order #${order._id.slice(-6)}
+                </h5>
+
+                <span class="badge bg-${badgeColor}">
+                  ${status}
+                </span>
+              </div>
+
+              ${itemsHTML}
+
+              <div class="d-flex justify-content-between mt-3">
+                <span>Payment Method</span>
+                <strong>${order.paymentMethod || "Cash on Delivery"}</strong>
+              </div>
+
+              <div class="d-flex justify-content-between mt-2">
+                <span>Order Total</span>
+                <span class="order-total">₹${order.totalPrice}</span>
+              </div>
+
+              ${
+                normalizedStatus !== "cancelled" &&
+                normalizedStatus !== "delivered"
+                  ? `<button class="btn btn-danger mt-3 cancel-order-btn"
+                      data-id="${order._id}">
+                      Cancel Order
+                    </button>`
+                  : ""
+              }
+
+            </div>
+          `;
+
+          ordersList.appendChild(card);
+        });
+
+      } catch (error) {
+        console.error("Orders loading error:", error);
+        ordersList.innerHTML = `
+          <div class="col-12 text-center">
+            <p>Unable to load your orders. Please try again.</p>
+            <button class="main-btn" onclick="loadOrders()">
+              Retry
+            </button>
+          </div>
+        `;
+      }
+    }
+
+
+    // CANCEL ORDER
+    ordersList.addEventListener("click", async (event) => {
+      const button = event.target.closest(".cancel-order-btn");
+
+      if (!button) return;
+
+      const orderId = button.dataset.id;
+      const token = localStorage.getItem("token");
+
+      if (!confirm("Are you sure you want to cancel this order?")) {
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `${API_URL}/orders/${orderId}/cancel`,
+          {
+            method: "PUT",
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          throw new Error(result.message || "Unable to cancel order");
+        }
+
+        alert("Order cancelled successfully!");
+        await loadOrders();
+
+      } catch (error) {
+        console.error("Cancel order error:", error);
+        alert(error.message);
+      }
+    });
+
+
+    // LOAD ORDERS WHEN PAGE OPENS
+    loadOrders();
+  </script>
+
+</body>
+</html>

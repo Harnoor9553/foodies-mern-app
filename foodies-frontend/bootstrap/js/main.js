@@ -404,11 +404,15 @@ const orders = response.data;
     const container = document.getElementById("ordersList");
     container.innerHTML = "";
 
-    if (orders.length === 0) {
-      container.innerHTML = "<p class='text-center'>No orders yet</p>";
-      document.getElementById("ordersSection").style.display = "block";
-      return;
-    }
+  if (orders.length === 0) {
+  container.innerHTML = "<p class='text-center'>No orders yet</p>";
+
+  document.getElementById("ordersSection").style.display = "block";
+
+ 
+
+  return;
+}
 
     orders.forEach(order => {
 
@@ -448,7 +452,10 @@ const orders = response.data;
 
     document.getElementById("ordersSection").style.display = "block";
 
-  } catch (error) {
+  document.getElementById("ordersSection").scrollIntoView({
+  behavior: "smooth"
+});
+}catch (error) {
     console.error(error);
     alert("Failed to load orders");
   }
